@@ -31,6 +31,10 @@ namespace PinTransferWPF
         private SolidColorBrush unselectedPlateColor = new SolidColorBrush();
         private SolidColorBrush primaryColor = new SolidColorBrush();
         private SolidColorBrush secondaryColor = new SolidColorBrush();
+        private SolidColorBrush tertiaryColor = new SolidColorBrush();
+        private SolidColorBrush primaryDestinationColor = new SolidColorBrush();
+        private SolidColorBrush secondaryDestinationColor = new SolidColorBrush();
+        private SolidColorBrush tertiaryDestinationColor = new SolidColorBrush();
         private SolidColorBrush accentColor = new SolidColorBrush();
         private SolidColorBrush backgroundColor = new SolidColorBrush();
         private SolidColorBrush secondaryBackgroundColor = new SolidColorBrush();
@@ -46,6 +50,10 @@ namespace PinTransferWPF
             InitializeComponent();
             primaryColor.Color = (Color)FindResource("PrimaryColor");
             secondaryColor.Color = (Color)FindResource("SecondaryColor");
+            tertiaryColor.Color = (Color)FindResource("TertiaryColor");
+            primaryDestinationColor.Color = (Color)FindResource("PrimaryDestinationColor");
+            secondaryDestinationColor.Color = (Color)FindResource("SecondaryDestinationColor");
+            tertiaryDestinationColor.Color = (Color)FindResource("TertiaryDestinationColor");
             accentColor.Color = (Color)FindResource("AccentColor");
             backgroundColor.Color = (Color)FindResource("BackgroundColor");
             secondaryBackgroundColor.Color = (Color)FindResource("SecondaryBackgroundColor");
@@ -655,17 +663,23 @@ namespace PinTransferWPF
                 {
                     if (item is SourcePlate sourcePlate)
                     {
-                        AddPlateToShelf(sourcePlate.PositionInStack, ColumnShift(sourcePlate.Stack), unselectedPlateColor, sourcePlate);
+                        AddPlateToShelf(sourcePlate.PositionInStack, GetVisualColumnForStack(sourcePlate.Stack), unselectedPlateColor, sourcePlate);
                     }
                     else if (item is DestinationPlate destPlate)
                     {
-                        AddPlateToShelf(destPlate.PositionInStack, ColumnShift(destPlate.Stack), unselectedPlateColor, destPlate);
+                        AddPlateToShelf(destPlate.PositionInStack, GetVisualColumnForStack(destPlate.Stack), unselectedPlateColor, destPlate);
                     }
                 }
             }
 
             // Update all stacker plate visuals
             UpdateAllStackerPlateVisuals();
+        }
+
+        private int GetVisualColumnForStack(int stack)
+        {
+            // Stack 4 -> Column 0, Stack 5 -> Column 1, Stack 0 -> Column 2, etc.
+            return (stack + 3) % Columns;
         }
 
         private void UpdateAllStackerPlateVisuals()
@@ -692,11 +706,30 @@ namespace PinTransferWPF
                                 platePath.Fill = (SolidColorBrush)FindResource("SecondaryBrush");
                                 platePath.Opacity = 0.8;
                             }
+                            else if (plate.SelectionColor == "PrimaryDestination")
+                            {
+                                platePath.Fill = (SolidColorBrush)FindResource("PrimaryDestinationBrush");
+                                platePath.Opacity = 0.8;
+                            }
+                            else if (plate.SelectionColor == "SecondaryDestination")
+                            {
+                                platePath.Fill = (SolidColorBrush)FindResource("SecondaryDestinationBrush");
+                                platePath.Opacity = 0.8;
+                            }
                         }
                         else
                         {
                             // Unselected plate
-                            platePath.Fill = backgroundColor; // Use background color for unselected
+                            //platePath.Fill = backgroundColor; // Use background color for unselected
+                            if (platePath.Tag is SourcePlate)
+                            {
+                                platePath.Fill = tertiaryColor;
+                            }
+                            else if
+                                 (platePath.Tag is DestinationPlate)
+                            {
+                                platePath.Fill = tertiaryDestinationColor;
+                            }
                             platePath.Opacity = 0.6;
                         }
                     }
@@ -789,14 +822,14 @@ namespace PinTransferWPF
                             for (int i = startIndex; i <= endIndex; i++)
                             {
                                 ViewModel.SourcePlates[i].IsSelected = true;
-                                ViewModel.SourcePlates[i].SelectionColor = "Secondary";
+                                ViewModel.SourcePlates[i].SelectionColor = "SecondaryDestination";
                             }
                         }
                         else
                         {
                             // No previous selection, just select this item
                             plate.IsSelected = true;
-                            plate.SelectionColor = "Secondary";
+                            plate.SelectionColor = "SecondaryDestination";
                             lastSelectedSourceIndex = currentIndex;
                         }
                     }
@@ -858,7 +891,7 @@ namespace PinTransferWPF
                     {
                         // Normal click behavior
                         plate.IsSelected = !plate.IsSelected;
-                        plate.SelectionColor = plate.IsSelected ? "Secondary" : null;
+                        plate.SelectionColor = plate.IsSelected ? "SecondaryDestination" : null;
                         lastSelectedDestIndex = plate.IsSelected ? currentIndex : -1;
                     }
 

@@ -156,6 +156,12 @@
                                         <DataTrigger Binding="{Binding SelectionColor}" Value="Secondary">
                                             <Setter TargetName="Border" Property="Background" Value="{StaticResource SecondaryBrush}" />
                                         </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectionColor}" Value="PrimaryDestination">
+                                            <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryDestinationBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectionColor}" Value="SecondaryDestination">
+                                            <Setter TargetName="Border" Property="Background" Value="{StaticResource SecondaryDestinationBrush}" />
+                                        </DataTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Setter.Value>
@@ -176,7 +182,8 @@
               ItemsSource="{Binding DestinationItemsWithAddButton}" 
               x:Name="DestinationPlateListView"
               SelectionMode="Single"
-              ItemTemplateSelector="{StaticResource PlateTemplateSelector}">
+              ItemTemplateSelector="{StaticResource PlateTemplateSelector}"
+              BorderBrush="{StaticResource PrimaryDestinationBrush}">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="IsSelected" Value="False" />
@@ -208,6 +215,12 @@
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SelectionColor}" Value="Secondary">
                                             <Setter TargetName="Border" Property="Background" Value="{StaticResource SecondaryBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectionColor}" Value="PrimaryDestination">
+                                            <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryDestinationBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectionColor}" Value="SecondaryDestination">
+                                            <Setter TargetName="Border" Property="Background" Value="{StaticResource SecondaryDestinationBrush}" />
                                         </DataTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -272,21 +285,24 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0" Orientation="Horizontal" >
-                    <Label Content="Run ID:" VerticalAlignment="Stretch" />
-                    <TextBox Text="{Binding RunID}" HorizontalAlignment="Stretch"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <Label Content="Run ID:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding RunId, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" >
-                    <Label Content="Screen Number:" VerticalAlignment="Stretch" />
-                    <TextBox Text="{Binding ScreenNumber}"/>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                    <Label Content="Screen Number:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding ScreenNumber, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
-                <StackPanel Grid.Row="2" Orientation="Horizontal" >
-                    <Label Content="User Name:" VerticalAlignment="Stretch" />
-                    <TextBox Text="{Binding UserName}"/>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <Label Content="User Name:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
-                <StackPanel Grid.Row="3" Orientation="Horizontal" >
-                    <Label Content="Current Script Line:" VerticalAlignment="Stretch" />
-                    <TextBox Text="{Binding CurrentScriptLine}"/>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal">
+                    <Label Content="Journal ID:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding JournalId, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
                 <Button Grid.Row="4" x:Name="btnCreateRun" Margin="5" Padding="5" Content="Create Run"
                    Command="{Binding CreateRunCommand}"/>
@@ -295,6 +311,9 @@
             <!-- Run Controls -->
             <Grid Grid.Row="2" HorizontalAlignment="Left" Margin="0,10,0,0">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -311,12 +330,19 @@
                    Command="{Binding ResumeRunCommand}"/>
                 <Button Content="Clear Run" HorizontalAlignment="Left" Grid.Row="3" VerticalAlignment="Stretch"
                     Command="{Binding ClearAllPlatesCommand}"/>
+                <CheckBox Content="Auto-fill empty slots" Grid.Row="4"
+                  IsChecked="{Binding AutoFillSlots}" 
+                  Margin="5"
+                  ToolTip="When checked, new plates will fill empty slots first. When unchecked, plates are always added after the last plate."/>
             </Grid>
 
             <!-- Add Plate Controls (Shown when in add mode) -->
             <Grid Grid.Row="3" Visibility="{Binding IsInSourceAddMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="Adding Source Plate - Select Destination Plates" Margin="0,5,0,5" FontWeight="Bold"/>
+                    <TextBlock Text="Adding Source Plate - Select 
+                               
+                               
+                               Plates" Margin="0,5,0,5" FontWeight="Bold"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Transfer Volume: " VerticalAlignment="Center"/>
                         <ComboBox ItemsSource="{Binding PinVolumes}" 

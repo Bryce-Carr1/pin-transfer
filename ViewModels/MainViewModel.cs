@@ -47,6 +47,7 @@ namespace ViewModels
         string connectionString = "Data Source=" + Parameters.LoggingDatabase;
         private ObservableCollection<SourcePlate> _sourcePlates;
         private ObservableCollection<int> _pinVolumes;
+
         public ObservableCollection<int> PinVolumes
         {
             get => _pinVolumes;
@@ -98,13 +99,28 @@ namespace ViewModels
         private bool _isInDestAddMode = false;
 
         [ObservableProperty]
-        private int _selectedTransferVolume = 100; //TODO fix
+        private int _selectedTransferVolume; //TODO fix
+
+        [ObservableProperty]
+        private string _runId;
+
+        [ObservableProperty]
+        private int _screenNumber;
+
+        [ObservableProperty]
+        private string _userName;
+
+        [ObservableProperty]
+        private string _journalId;
 
         public MainViewModel(InstrumentController instrumentController, string connectionString)
         {
             SourcePlates = new ObservableCollection<SourcePlate>();
             DestinationPlates = new ObservableCollection<DestinationPlate>();
             PinVolumes = new ObservableCollection<int>();
+            SourcesToAdd = 1;                    // Default number of sources
+            ReplicatesOfSourcesToAdd = 2;        // Default number of replicates
+            VolumeOfSourcesToAdd = 100;          // Default volume (will be selected in dropdown)
             Func<int, StackType> stackerFactory = _stackCapacity => new StackType(_stackCapacity);
             _carousel = new Carousel<StackType>(_numStacks, _stackCapacity, stackerFactory);
             _instrumentController = instrumentController;
@@ -134,7 +150,7 @@ namespace ViewModels
             PinVolumes.Add(33);
             PinVolumes.Add(100);
             PinVolumes.Add(300);
-
+            
             if (Parameters.UsingInstruments)
             {
                 SetupEventHandlers();
@@ -218,38 +234,53 @@ namespace ViewModels
                 return;
             }
 
-            // Create new source plate
-            int currentSourcePlates = SourcePlates.Count();
-            int startingStack = currentSourcePlates / _stackCapacity;
-            int finalStack = startingStack;
-            int startingPosition = currentSourcePlates - ((startingStack) * (_stackCapacity));
-            int finalPosition = startingPosition;
-
-            var newSourcePlate = new SourcePlate
+            // Check capacity for SourcePlate type specifically
+            if (!HasCapacityFor(1, typeof(SourcePlate)))
             {
-                ID = "source_" + (SourcePlates.Count + 1).ToString(),
-                Stack = startingStack,
-                FinalStack = finalStack,
-                PositionInStack = startingPosition,
-                FinalPositionInStack = finalPosition,
-                Status = new Dictionary<string, bool>() { { "pinned", false } },
-                Replicates = new Tuple<int, int>(SelectedTransferVolume, selectedDestPlates.Count)
-            };
-
-            // Add the source plate
-            SourcePlates.Add(newSourcePlate);
-
-            // Link to selected destination plates
-            foreach (var destPlate in selectedDestPlates)
-            {
-                destPlate.AddSourcePlate(newSourcePlate.ID, SelectedTransferVolume);
+                MessageBox.Show("Cannot add source plate - no available slots in stacks that can accept source plates!",
+                               "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText += "Cannot add source plate - capacity exceeded.\n";
+                return;
             }
 
-            StatusText += $"Added source plate {newSourcePlate.ID} linked to {selectedDestPlates.Count} destination plates\n";
-            IsInSourceAddMode = false;
+            try
+            {
+                // Get next available position
+                var (stack, position) = GetNextAvailablePosition(typeof(SourcePlate));
 
-            // Set as selected plate after it's added
-            HighlightSelectedPlate(newSourcePlate);
+                var newSourcePlate = new SourcePlate
+                {
+                    ID = "source_" + (SourcePlates.Count + 1).ToString(),
+                    Stack = stack,
+                    FinalStack = stack,
+                    PositionInStack = position,
+                    FinalPositionInStack = position,
+                    Status = new Dictionary<string, bool>() { { "pinned", false } },
+                    Replicates = new Tuple<int, int>(SelectedTransferVolume, selectedDestPlates.Count)
+                };
+
+                // Add the source plate
+                SourcePlates.Add(newSourcePlate);
+
+                // Link to selected destination plates
+                foreach (var destPlate in selectedDestPlates)
+                {
+                    destPlate.AddSourcePlate(newSourcePlate.ID, SelectedTransferVolume);
+                }
+
+                StatusText += $"Added source plate {newSourcePlate.ID} at Stack {stack}, Position {position}\n";
+                StatusText += GetCapacityInfo() + "\n";
+                StatusText += GetStackAssignmentInfo() + "\n";
+                IsInSourceAddMode = false;
+
+                // Set as selected plate after it's added
+                HighlightSelectedPlate(newSourcePlate);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText += ex.Message + "\n";
+            }
         }
 
         [RelayCommand]
@@ -272,37 +303,53 @@ namespace ViewModels
                 return;
             }
 
-            // Calculate position for the new destination plate
-            int startingStack = (_numStacks - 1) - (DestinationPlates.Count / _stackCapacity);
-            int finalStack = startingStack;
-            int startingPosition = DestinationPlates.Count() - (((_numStacks - 1) - startingStack) * _stackCapacity);
-            int finalPosition = startingPosition;
-
-            // Create the new destination plate
-            var newDestPlate = new DestinationPlate
+            // Check capacity for DestinationPlate type specifically
+            if (!HasCapacityFor(1, typeof(DestinationPlate)))
             {
-                ID = "destination_" + (DestinationPlates.Count + 1).ToString(),
-                Stack = startingStack,
-                FinalStack = finalStack,
-                PositionInStack = startingPosition,
-                FinalPositionInStack = finalPosition,
-                Status = new Dictionary<string, bool>() { { "pinned", false } }
-            };
-
-            // Add the source connections
-            foreach (var sourcePlate in selectedSourcePlates)
-            {
-                newDestPlate.AddSourcePlate(sourcePlate.ID, SelectedTransferVolume);
+                MessageBox.Show("Cannot add destination plate - no available slots in stacks that can accept destination plates!",
+                               "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText += "Cannot add destination plate - capacity exceeded.\n";
+                return;
             }
 
-            // Add the destination plate
-            DestinationPlates.Add(newDestPlate);
+            try
+            {
+                // Get next available position
+                var (stack, position) = GetNextAvailablePosition(typeof(DestinationPlate));
 
-            StatusText += $"Added destination plate {newDestPlate.ID} linked to {selectedSourcePlates.Count} source plates\n";
-            IsInDestAddMode = false;
+                // Create the new destination plate
+                var newDestPlate = new DestinationPlate
+                {
+                    ID = "destination_" + (DestinationPlates.Count + 1).ToString(),
+                    Stack = stack,
+                    FinalStack = stack,
+                    PositionInStack = position,
+                    FinalPositionInStack = position,
+                    Status = new Dictionary<string, bool>() { { "pinned", false } }
+                };
 
-            // Set as selected plate after it's added
-            HighlightSelectedPlate(newDestPlate);
+                // Add the source connections
+                foreach (var sourcePlate in selectedSourcePlates)
+                {
+                    newDestPlate.AddSourcePlate(sourcePlate.ID, SelectedTransferVolume);
+                }
+
+                // Add the destination plate
+                DestinationPlates.Add(newDestPlate);
+
+                StatusText += $"Added destination plate {newDestPlate.ID} at Stack {stack}, Position {position}\n";
+                StatusText += GetCapacityInfo() + "\n";
+                StatusText += GetStackAssignmentInfo() + "\n";
+                IsInDestAddMode = false;
+
+                // Set as selected plate after it's added
+                HighlightSelectedPlate(newDestPlate);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText += ex.Message + "\n";
+            }
         }
 
         // AI
@@ -350,8 +397,10 @@ namespace ViewModels
         [RelayCommand]
         private void DeletePlate(object parameter)
         {
+            int stackToCheck = -1;
             if (parameter is SourcePlate sourcePlate)
             {
+                stackToCheck = sourcePlate.Stack;
                 // First, remove references from destination plates
                 foreach (var destPlate in DestinationPlates.ToList())
                 {
@@ -397,6 +446,7 @@ namespace ViewModels
             }
             else if (parameter is DestinationPlate destPlate)
             {
+                stackToCheck = destPlate.Stack;
                 // Remove the plate from carousel if it exists there
                 if (_carousel != null)
                 {
@@ -435,12 +485,23 @@ namespace ViewModels
                 StatusText += $"Deleted destination plate {destPlate.ID}\n";
             }
 
+            // Check if the stack should be unassigned
+            if (stackToCheck >= 0)
+            {
+                CheckAndUnassignEmptyStack(stackToCheck);
+            }
+
             // Clear any selections
             ClearAllPlateSelections();
 
             // Update UI collections
             UpdateSourceItemsCollection(new AddButtonViewModel("Source", new RelayCommand<string>(_ => StartAddSourcePlate())));
             UpdateDestinationItemsCollection(new AddButtonViewModel("Destination", new RelayCommand<string>(_ => StartAddDestinationPlate())));
+
+            // Update capacity display
+            OnPropertyChanged(nameof(CapacityInfo));
+            StatusText += GetCapacityInfo() + "\n";
+            StatusText += GetStackAssignmentInfo() + "\n";
 
             // Trigger visual update for the stacker
             PlateVisualsNeedUpdate?.Invoke(this, EventArgs.Empty);
@@ -543,13 +604,277 @@ namespace ViewModels
             RunID = null,
             TimeRun = DateTime.Now,
             ScreenNumber = -1,
-            UserName = "Bryce",
-            JournalID = "testJournal8"
+            UserName = "",
+            JournalID = ""
         };
 
         private void AppendStatus(string message)
         {
             StatusText += $"{DateTime.Now:HH:mm:ss} - {message}\n";
+        }
+
+        // Add these new properties
+        [ObservableProperty]
+        private bool _autoFillSlots = true; // Option to fill open slots vs always append
+
+        private Dictionary<int, Type> _stackAssignments = new Dictionary<int, Type>();
+
+        // Method to get the assigned plate type for a stack (null if unassigned)
+        private Type GetStackPlateType(int stackIndex)
+        {
+            return _stackAssignments.TryGetValue(stackIndex, out Type plateType) ? plateType : null;
+        }
+
+        // Method to assign a stack to a plate type
+        private void AssignStackToPlateType(int stackIndex, Type plateType)
+        {
+            if (_stackAssignments.ContainsKey(stackIndex))
+            {
+                if (_stackAssignments[stackIndex] != plateType)
+                {
+                    throw new InvalidOperationException($"Stack {stackIndex} is already assigned to {_stackAssignments[stackIndex].Name} plates");
+                }
+            }
+            else
+            {
+                _stackAssignments[stackIndex] = plateType;
+                StatusText += $"Stack {stackIndex} assigned to {plateType.Name} plates\n";
+            }
+        }
+
+        // Method to unassign a stack when it becomes empty
+        private void CheckAndUnassignEmptyStack(int stackIndex)
+        {
+            bool hasSourcePlates = SourcePlates.Any(p => p.Stack == stackIndex);
+            bool hasDestPlates = DestinationPlates.Any(p => p.Stack == stackIndex);
+
+            if (!hasSourcePlates && !hasDestPlates && _stackAssignments.ContainsKey(stackIndex))
+            {
+                Type removedType = _stackAssignments[stackIndex];
+                _stackAssignments.Remove(stackIndex);
+                StatusText += $"Stack {stackIndex} unassigned from {removedType.Name} plates (now empty)\n";
+            }
+        }
+
+        // Updated method to get available slots for a specific plate type
+        private List<int> GetAvailableSlots(int stackIndex, Type plateType)
+        {
+            var availableSlots = new List<int>();
+            var occupiedSlots = new HashSet<int>();
+
+            // Check if this stack can accept this plate type
+            Type assignedType = GetStackPlateType(stackIndex);
+            if (assignedType != null && assignedType != plateType)
+            {
+                return availableSlots; // Empty list - stack is assigned to different plate type
+            }
+
+            // Get all plates in this stack
+            foreach (var plate in SourcePlates.Where(p => p.Stack == stackIndex))
+            {
+                occupiedSlots.Add(plate.PositionInStack);
+            }
+            foreach (var plate in DestinationPlates.Where(p => p.Stack == stackIndex))
+            {
+                occupiedSlots.Add(plate.PositionInStack);
+            }
+
+            // Find available slots
+            for (int i = 0; i < _stackCapacity; i++)
+            {
+                if (!occupiedSlots.Contains(i))
+                {
+                    availableSlots.Add(i);
+                }
+            }
+
+            return availableSlots.OrderBy(x => x).ToList();
+        }
+
+        // Updated method to get the next available position for a specific plate type
+        private (int stack, int position) GetNextAvailablePosition(Type plateType)
+        {
+            if (AutoFillSlots)
+            {
+                // Try to fill empty slots first, but respect the original stacking direction
+                if (plateType == typeof(SourcePlate))
+                {
+                    // Source plates: search from left to right (stack 0 to numStacks-1)
+                    for (int stack = 0; stack < _numStacks; stack++)
+                    {
+                        var availableSlots = GetAvailableSlots(stack, plateType);
+                        if (availableSlots.Count > 0)
+                        {
+                            if (GetStackPlateType(stack) == null)
+                            {
+                                AssignStackToPlateType(stack, plateType);
+                            }
+                            return (stack, availableSlots[0]);
+                        }
+                    }
+                }
+                else if (plateType == typeof(DestinationPlate))
+                {
+                    // Destination plates: search from right to left (stack numStacks-1 to 0)
+                    for (int stack = _numStacks - 1; stack >= 0; stack--)
+                    {
+                        var availableSlots = GetAvailableSlots(stack, plateType);
+                        if (availableSlots.Count > 0)
+                        {
+                            if (GetStackPlateType(stack) == null)
+                            {
+                                AssignStackToPlateType(stack, plateType);
+                            }
+                            return (stack, availableSlots[0]);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Append mode: maintain original behavior
+                if (plateType == typeof(SourcePlate))
+                {
+                    // Source plates: start from stack 0 and work right
+                    int totalSourcePlates = SourcePlates.Count;
+                    int preferredStack = totalSourcePlates / _stackCapacity;
+                    int preferredPosition = totalSourcePlates % _stackCapacity;
+
+                    // Check if preferred position is available
+                    if (preferredStack < _numStacks)
+                    {
+                        Type assignedType = GetStackPlateType(preferredStack);
+                        if (assignedType == null || assignedType == typeof(SourcePlate))
+                        {
+                            var availableSlots = GetAvailableSlots(preferredStack, plateType);
+                            if (availableSlots.Contains(preferredPosition))
+                            {
+                                if (assignedType == null)
+                                {
+                                    AssignStackToPlateType(preferredStack, plateType);
+                                }
+                                return (preferredStack, preferredPosition);
+                            }
+                        }
+                    }
+
+                    // Fallback: find any available slot from left to right
+                    for (int stack = 0; stack < _numStacks; stack++)
+                    {
+                        Type assignedType = GetStackPlateType(stack);
+                        if (assignedType == null || assignedType == plateType)
+                        {
+                            var availableSlots = GetAvailableSlots(stack, plateType);
+                            if (availableSlots.Count > 0)
+                            {
+                                if (assignedType == null)
+                                {
+                                    AssignStackToPlateType(stack, plateType);
+                                }
+                                return (stack, availableSlots.Max()); // Use highest available position for append
+                            }
+                        }
+                    }
+                }
+                else if (plateType == typeof(DestinationPlate))
+                {
+                    // Destination plates: start from rightmost stack and work left
+                    int totalDestPlates = DestinationPlates.Count;
+                    int preferredStack = (_numStacks - 1) - (totalDestPlates / _stackCapacity);
+                    int preferredPosition = totalDestPlates - (((_numStacks - 1) - preferredStack) * _stackCapacity);
+
+                    // Check if preferred position is available
+                    if (preferredStack >= 0)
+                    {
+                        Type assignedType = GetStackPlateType(preferredStack);
+                        if (assignedType == null || assignedType == typeof(DestinationPlate))
+                        {
+                            var availableSlots = GetAvailableSlots(preferredStack, plateType);
+                            if (availableSlots.Contains(preferredPosition))
+                            {
+                                if (assignedType == null)
+                                {
+                                    AssignStackToPlateType(preferredStack, plateType);
+                                }
+                                return (preferredStack, preferredPosition);
+                            }
+                        }
+                    }
+
+                    // Fallback: find any available slot from right to left
+                    for (int stack = _numStacks - 1; stack >= 0; stack--)
+                    {
+                        Type assignedType = GetStackPlateType(stack);
+                        if (assignedType == null || assignedType == plateType)
+                        {
+                            var availableSlots = GetAvailableSlots(stack, plateType);
+                            if (availableSlots.Count > 0)
+                            {
+                                if (assignedType == null)
+                                {
+                                    AssignStackToPlateType(stack, plateType);
+                                }
+                                return (stack, availableSlots.Max()); // Use highest available position for append
+                            }
+                        }
+                    }
+                }
+            }
+
+            throw new InvalidOperationException($"No available slots for {plateType.Name} plates");
+        }
+
+        // Updated method to check if there's capacity for new plates of a specific type
+        private bool HasCapacityFor(int plateCount, Type plateType)
+        {
+            int totalAvailableSlots = 0;
+            for (int i = 0; i < _numStacks; i++)
+            {
+                totalAvailableSlots += GetAvailableSlots(i, plateType).Count;
+            }
+            return totalAvailableSlots >= plateCount;
+        }
+
+        // Updated method to get capacity info for display
+        public string GetCapacityInfo()
+        {
+            int sourceCapacity = 0;
+            int destCapacity = 0;
+            int unassignedCapacity = 0;
+
+            for (int i = 0; i < _numStacks; i++)
+            {
+                Type assignedType = GetStackPlateType(i);
+                int availableSlots = GetAvailableSlots(i, typeof(SourcePlate)).Count + GetAvailableSlots(i, typeof(DestinationPlate)).Count;
+
+                if (assignedType == null)
+                {
+                    unassignedCapacity += _stackCapacity - (SourcePlates.Count(p => p.Stack == i) + DestinationPlates.Count(p => p.Stack == i));
+                }
+                else if (assignedType == typeof(SourcePlate))
+                {
+                    sourceCapacity += GetAvailableSlots(i, typeof(SourcePlate)).Count;
+                }
+                else if (assignedType == typeof(DestinationPlate))
+                {
+                    destCapacity += GetAvailableSlots(i, typeof(DestinationPlate)).Count;
+                }
+            }
+
+            return $"Available slots - Source: {sourceCapacity}, Destination: {destCapacity}, Unassigned: {unassignedCapacity}";
+        }
+
+        // Method to get stack assignment info for display
+        public string GetStackAssignmentInfo()
+        {
+            var assignments = new List<string>();
+            for (int i = 0; i < _numStacks; i++)
+            {
+                Type assignedType = GetStackPlateType(i);
+                string typeName = assignedType?.Name.Replace("Plate", "") ?? "Unassigned";
+                assignments.Add($"Stack {i}: {typeName}");
+            }
+            return string.Join(", ", assignments);
         }
 
         [ObservableProperty]
@@ -566,111 +891,87 @@ namespace ViewModels
 
         [ObservableProperty]
         private int volumeOfSourcesToAdd;
+        public string CapacityInfo => GetCapacityInfo();
 
         [RelayCommand]
         private void CreatePlates()
         {
-            //TODO account for existing plates
-            int StartingStack;
-            int FinalStack;
-            int StartingPosition;
-            int FinalPosition;
-            int existingSourcePlatesCount = SourcePlates.Count;
+            // Check capacity before creating plates
+            int totalNewDestPlates = SourcesToAdd * ReplicatesOfSourcesToAdd;
 
-            for (int sourceCount = existingSourcePlatesCount; sourceCount < existingSourcePlatesCount + SourcesToAdd; sourceCount++)
+            if (!HasCapacityFor(SourcesToAdd, typeof(SourcePlate)))
             {
-                int currentSourcePlates = SourcePlates.Count();
-                StartingStack = currentSourcePlates / (_stackCapacity);
-                FinalStack = StartingStack;
-                StartingPosition = currentSourcePlates - ((StartingStack) * (_stackCapacity));
-                FinalPosition = StartingPosition;
-                if (typeof(StackType) == typeof(HotelStacker))
-                {
-                    FinalStack = StartingStack;
-                    FinalPosition = StartingPosition;
-                }
-                else if (typeof(StackType) == typeof(SequentialStacker))
-                {
-                    FinalStack = StartingStack * 2; //TODO fix this...
-                    FinalPosition = currentSourcePlates - ((FinalStack) * (_stackCapacity));
-                    //if (FinalStack > _numStacks)
-                    if (FinalStack > 2)
-                    {
-                        throw new InvalidOperationException("Too many plates...");
-                    }
-                }
-                SourcePlates.Add(new SourcePlate
-                {
-                    ID = "source_" + sourceCount.ToString(),
-                    Stack = StartingStack,
-                    FinalStack = FinalStack,
-                    PositionInStack = StartingPosition,
-                    FinalPositionInStack = FinalPosition,
-                    Status = new Dictionary<string, bool>()
-                        {
-                            { "pinned", false }
-                        },
-                    Replicates = new Tuple<int, int>(VolumeOfSourcesToAdd, ReplicatesOfSourcesToAdd)
-                });
+                MessageBox.Show($"Cannot create {SourcesToAdd} source plates - insufficient capacity!",
+                               "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
 
-            foreach (var sourcePlate in SourcePlates.Skip(existingSourcePlatesCount))
+            if (!HasCapacityFor(totalNewDestPlates, typeof(DestinationPlate)))
             {
-                for (int replicate = 1; replicate <= sourcePlate.Replicates.Item2; replicate++)
-                {
-                    StartingStack = (_numStacks - 1) - (DestinationPlates.Count / _stackCapacity);
-                    FinalStack = StartingStack;
-                    StartingPosition = DestinationPlates.Count() - (((_numStacks - 1) - StartingStack) * _stackCapacity);
-                    FinalPosition = StartingPosition;
-                    if (typeof(StackType) == typeof(HotelStacker))
-                    {
-                        FinalStack = StartingStack;
-                        FinalPosition = StartingPosition;
-                    }
-                    else if (typeof(StackType) == typeof(SequentialStacker))
-                    {
-                        FinalStack = (_numStacks - 1) - ((Math.Abs(DestinationPlates.Count - 1) / _stackCapacity) * 2);
-                        FinalPosition = DestinationPlates.Count() - (((_numStacks - 1) - FinalStack) * _stackCapacity);
-                        if (FinalStack > (_numStacks - 1))
-                        {
-                            throw new InvalidOperationException("Too many plates.");
-                        }
-                    }
-                    DestinationPlates.Add(new DestinationPlate
-                    {
-                        ID = "destination_" + (DestinationPlates.Count() + 1).ToString(),
-                        Stack = StartingStack,
-                        FinalStack = FinalStack,
-                        PositionInStack = StartingPosition,
-                        FinalPositionInStack = FinalPosition,
-                        Status = new Dictionary<string, bool>()
-                            {
-                                { "pinned", false }
-                            }
+                MessageBox.Show($"Cannot create {totalNewDestPlates} destination plates - insufficient capacity!",
+                               "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
+            try
+            {
+                // Create source plates
+                for (int sourceCount = 0; sourceCount < SourcesToAdd; sourceCount++)
+                {
+                    var (stack, position) = GetNextAvailablePosition(typeof(SourcePlate));
+
+                    SourcePlates.Add(new SourcePlate
+                    {
+                        ID = "source_" + (SourcePlates.Count + 1).ToString(),
+                        Stack = stack,
+                        FinalStack = stack,
+                        PositionInStack = position,
+                        FinalPositionInStack = position,
+                        Status = new Dictionary<string, bool>() { { "pinned", false } },
+                        Replicates = new Tuple<int, int>(VolumeOfSourcesToAdd, ReplicatesOfSourcesToAdd)
                     });
-                    DestinationPlate plate = DestinationPlates.ToList().Find(dp => dp.ID == "destination_" + (DestinationPlates.Count()).ToString());
-                    plate.AddSourcePlate(sourcePlate.ID, sourcePlate.Replicates.Item2);
                 }
-            }
 
-            // Select the last created source plate if any were created
-            if (SourcesToAdd > 0)
-            {
-                var lastSourcePlate = SourcePlates.LastOrDefault();
-                if (lastSourcePlate != null)
+                // Create destination plates for each source plate
+                var newSourcePlates = SourcePlates.Skip(SourcePlates.Count - SourcesToAdd).ToList();
+                foreach (var sourcePlate in newSourcePlates)
                 {
-                    HighlightSelectedPlate(lastSourcePlate);
+                    for (int replicate = 1; replicate <= sourcePlate.Replicates.Item2; replicate++)
+                    {
+                        var (stack, position) = GetNextAvailablePosition(typeof(DestinationPlate));
+
+                        var destPlate = new DestinationPlate
+                        {
+                            ID = "destination_" + (DestinationPlates.Count + 1).ToString(),
+                            Stack = stack,
+                            FinalStack = stack,
+                            PositionInStack = position,
+                            FinalPositionInStack = position,
+                            Status = new Dictionary<string, bool>() { { "pinned", false } }
+                        };
+
+                        destPlate.AddSourcePlate(sourcePlate.ID, sourcePlate.Replicates.Item1);
+                        DestinationPlates.Add(destPlate);
+                    }
+                }
+
+                StatusText += $"Created {SourcesToAdd} source plates and {totalNewDestPlates} destination plates\n";
+                StatusText += GetCapacityInfo() + "\n";
+
+                // Select the last created source plate if any were created
+                if (SourcesToAdd > 0)
+                {
+                    var lastSourcePlate = SourcePlates.LastOrDefault();
+                    if (lastSourcePlate != null)
+                    {
+                        HighlightSelectedPlate(lastSourcePlate);
+                    }
                 }
             }
-            // If no source plates were created but destination plates were, select the last destination plate
-            else if (DestinationPlates.Count > 0)
+            catch (InvalidOperationException ex)
             {
-                var lastDestPlate = DestinationPlates.LastOrDefault();
-                if (lastDestPlate != null)
-                {
-                    HighlightSelectedPlate(lastDestPlate);
-                }
+                MessageBox.Show(ex.Message, "Capacity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                StatusText += ex.Message + "\n";
             }
         }
 
@@ -680,9 +981,16 @@ namespace ViewModels
             //TODO fix sequential logic
             try
             {
+                // Update RunInfo with current values
+                RunInfo.RunID = RunId;
+                RunInfo.ScreenNumber = ScreenNumber;
+                RunInfo.UserName = UserName;
+                RunInfo.JournalID = JournalId;
+                RunInfo.TimeRun = DateTime.Now;
+
                 JournalInfo journalInfo = new JournalInfo
                 {
-                    JournalID = "testJournal8",
+                    JournalID = RunInfo.JournalID,
                     SourcePlates = SourcePlates.ToList(),
                     DestinationPlates = DestinationPlates.ToList()
                 };
@@ -907,7 +1215,7 @@ namespace ViewModels
                     if (linkedDestPlate.SourcePlates.Any(sp => sp.Key == sourcePlate.ID))
                     {
                         linkedDestPlate.IsSelected = true;
-                        linkedDestPlate.SelectionColor = "Secondary";
+                        linkedDestPlate.SelectionColor = "SecondaryDestination";
                     }
                 }
             }
@@ -916,7 +1224,7 @@ namespace ViewModels
                 // Set this plate as selected with primary color
                 CurrentlySelectedDestinationPlate = destPlate;
                 destPlate.IsSelected = true;
-                destPlate.SelectionColor = "Primary";
+                destPlate.SelectionColor = "PrimaryDestination";
 
                 // Clear any previously selected source plate
                 CurrentlySelectedSourcePlate = null;
@@ -961,14 +1269,13 @@ namespace ViewModels
             PlateVisualsNeedUpdate?.Invoke(this, EventArgs.Empty);
         }
 
-        //AI
         public void TogglePlateSelection(Plate plate)
         {
             if (IsInSourceAddMode && plate is DestinationPlate destPlate)
             {
                 // In source add mode, toggle destination plate selection
                 destPlate.IsSelected = !destPlate.IsSelected;
-                destPlate.SelectionColor = destPlate.IsSelected ? "Secondary" : null;
+                destPlate.SelectionColor = destPlate.IsSelected ? "SecondaryDestination" : null;
                 OnPropertyChanged(nameof(DestinationPlates));
                 PlateVisualsNeedUpdate?.Invoke(this, EventArgs.Empty);
             }

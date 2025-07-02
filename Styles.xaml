@@ -3,8 +3,12 @@
                     xmlns:local="clr-namespace:PinTransferWPF"
                     xmlns:System="clr-namespace:System;assembly=mscorlib">
     <!-- Define Colors -->
-    <Color x:Key="PrimaryColor">#B42A6C</Color>
-    <Color x:Key="SecondaryColor">#F37AA5</Color>
+    <Color x:Key="PrimaryColor">#7F3F55</Color>
+    <Color x:Key="SecondaryColor">#A7526F</Color>
+    <Color x:Key="TertiaryColor">#F4ACC5</Color>
+    <Color x:Key="PrimaryDestinationColor">#24532F</Color>
+    <Color x:Key="SecondaryDestinationColor">#5A8964</Color>
+    <Color x:Key="TertiaryDestinationColor">#80BD8D</Color>
     <Color x:Key="AccentColor">#281BB5</Color>
     <Color x:Key="BackgroundColor">#C9C1C5</Color>
     <Color x:Key="SecondaryBackgroundColor">#a3989d</Color>
@@ -15,6 +19,10 @@
     <!-- Define SolidColorBrushes -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}" />
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource TertiaryColor}" />
+    <SolidColorBrush x:Key="PrimaryDestinationBrush" Color="{StaticResource PrimaryDestinationColor}" />
+    <SolidColorBrush x:Key="SecondaryDestinationBrush" Color="{StaticResource SecondaryDestinationColor}" />
+    <SolidColorBrush x:Key="TertiaryDestinationBrush" Color="{StaticResource TertiaryDestinationColor}" />
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}" />
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor}" />
