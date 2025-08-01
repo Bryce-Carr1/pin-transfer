@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Windows.Data;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Data.SQLite;
 
 namespace ViewModels
 {
@@ -1048,7 +1049,7 @@ namespace ViewModels
                     });
                 }
             }
-            string currentJournalID = "testJournal8"; // Replace with actual journal ID
+            string currentJournalID = RunInfo.JournalID; // Replace with actual journal ID
             _events.ResetEvents();
             string serializedPlates = _runLogger.LoadRunState(currentJournalID).InitialPlates;
             List<Plate> deserializedPlates = PlateSerializer.DeserializePlates(serializedPlates);
@@ -1726,5 +1727,298 @@ namespace ViewModels
 
         public event EventHandler CloseWindowRequested;
 
+        //**************LOAD/SAVE*******************
+        // Add these properties to track script state
+        [ObservableProperty]
+        private bool _hasUnsavedChanges = false;
+
+        [ObservableProperty]
+        private string _currentScriptName = null;
+
+        [ObservableProperty]
+        private bool _isWorkingWithScript = false;
+
+        // Add this method to track changes
+        private void MarkAsModified()
+        {
+            HasUnsavedChanges = true;
+        }
+
+        // Update existing methods to mark as modified
+        partial void OnSourcesToAddChanged(int value) => MarkAsModified();
+        partial void OnReplicatesOfSourcesToAddChanged(int value) => MarkAsModified();
+        partial void OnVolumeOfSourcesToAddChanged(int value) => MarkAsModified();
+
+        // Add to existing plate collection change handlers
+        private void OnSourcePlatesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            MarkAsModified();
+        }
+
+        private void OnDestinationPlatesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            MarkAsModified();
+        }
+
+        [RelayCommand]
+        private void SaveScript()
+        {
+            // Create save dialog or use current script name
+            string scriptName = CurrentScriptName;
+
+            if (string.IsNullOrEmpty(scriptName))
+            {
+                // Show dialog to get script name
+                var dialog = new Microsoft.Win32.SaveFileDialog()
+                {
+                    Filter = "Script files (*.script)|*.script|All files (*.*)|*.*",
+                    DefaultExt = ".script"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    scriptName = System.IO.Path.GetFileNameWithoutExtension(dialog.FileName);
+                }
+                else
+                {
+                    return; // User cancelled
+                }
+            }
+
+            try
+            {
+                SaveScriptToDatabase(scriptName);
+                CurrentScriptName = scriptName;
+                HasUnsavedChanges = false;
+                IsWorkingWithScript = true;
+                StatusText += $"Script '{scriptName}' saved successfully.\n";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save script: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private void LoadScript()
+        {
+            try
+            {
+                var availableScripts = GetAvailableScripts();
+
+                if (availableScripts.Count == 0)
+                {
+                    MessageBox.Show("No saved scripts found.", "Load Script", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Create a simple selection dialog (you might want to create a proper dialog)
+                var scriptNames = string.Join("\n", availableScripts.Select((s, i) => $"{i + 1}. {s}"));
+                var result = MessageBox.Show($"Available scripts:\n{scriptNames}\n\nEnter script name to load:",
+                                           "Load Script", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.OK)
+                {
+                    // For now, just load the first one - you should implement proper selection
+                    if (availableScripts.Count > 0)
+                    {
+                        LoadScriptFromDatabase(availableScripts[0]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load script: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveScriptToDatabase(string scriptName)
+        {
+            var scriptInfo = new ScriptInfo
+            {
+                ScriptName = scriptName,
+                SourcePlates = SourcePlates.ToList(),
+                DestinationPlates = DestinationPlates.ToList(),
+                SourcesToAdd = SourcesToAdd,
+                ReplicatesOfSourcesToAdd = ReplicatesOfSourcesToAdd,
+                VolumeOfSourcesToAdd = VolumeOfSourcesToAdd,
+                AutoFillSlots = AutoFillSlots,
+                SavedDate = DateTime.Now
+            };
+
+            SaveScriptToDatabase(scriptInfo);
+        }
+
+        private void SaveScriptToDatabase(ScriptInfo scriptInfo)
+        {
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                // Create Scripts table if it doesn't exist
+                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS Scripts (
+            ScriptName TEXT PRIMARY KEY,
+            SourcePlatesJson TEXT NOT NULL,
+            DestinationPlatesJson TEXT NOT NULL,
+            SourcesToAdd INTEGER NOT NULL,
+            ReplicatesOfSourcesToAdd INTEGER NOT NULL,
+            VolumeOfSourcesToAdd INTEGER NOT NULL,
+            AutoFillSlots INTEGER NOT NULL,
+            SavedDate TEXT NOT NULL
+        )", connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+
+                // Serialize plates to JSON
+                var sourcePlatesJson = System.Text.Json.JsonSerializer.Serialize(scriptInfo.SourcePlates);
+                var destinationPlatesJson = System.Text.Json.JsonSerializer.Serialize(scriptInfo.DestinationPlates);
+
+                // Save or update script
+                using (var command = new SQLiteCommand(@"INSERT OR REPLACE INTO Scripts 
+            (ScriptName, SourcePlatesJson, DestinationPlatesJson, SourcesToAdd, ReplicatesOfSourcesToAdd, 
+             VolumeOfSourcesToAdd, AutoFillSlots, SavedDate)
+            VALUES (@ScriptName, @SourcePlatesJson, @DestinationPlatesJson, @SourcesToAdd, 
+                    @ReplicatesOfSourcesToAdd, @VolumeOfSourcesToAdd, @AutoFillSlots, @SavedDate)", connection))
+                {
+                    command.Parameters.AddWithValue("@ScriptName", scriptInfo.ScriptName);
+                    command.Parameters.AddWithValue("@SourcePlatesJson", sourcePlatesJson);
+                    command.Parameters.AddWithValue("@DestinationPlatesJson", destinationPlatesJson);
+                    command.Parameters.AddWithValue("@SourcesToAdd", scriptInfo.SourcesToAdd);
+                    command.Parameters.AddWithValue("@ReplicatesOfSourcesToAdd", scriptInfo.ReplicatesOfSourcesToAdd);
+                    command.Parameters.AddWithValue("@VolumeOfSourcesToAdd", scriptInfo.VolumeOfSourcesToAdd);
+                    command.Parameters.AddWithValue("@AutoFillSlots", scriptInfo.AutoFillSlots ? 1 : 0);
+                    command.Parameters.AddWithValue("@SavedDate", scriptInfo.SavedDate.ToString("O"));
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private List<string> GetAvailableScripts()
+        {
+            var scripts = new List<string>();
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                // Check if Scripts table exists
+                using (var command = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table' AND name='Scripts';", connection))
+                {
+                    if (command.ExecuteScalar() == null)
+                    {
+                        return scripts; // Table doesn't exist, return empty list
+                    }
+                }
+
+                using (var command = new SQLiteCommand("SELECT ScriptName FROM Scripts ORDER BY SavedDate DESC", connection))
+                {
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            scripts.Add(reader.GetString(0));
+                        }
+                    }
+                }
+            }
+            return scripts;
+        }
+
+        private void LoadScriptFromDatabase(string scriptName)
+        {
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                using (var command = new SQLiteCommand("SELECT * FROM Scripts WHERE ScriptName = @ScriptName", connection))
+                {
+                    command.Parameters.AddWithValue("@ScriptName", scriptName);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            // Clear existing plates
+                            ClearAllPlatesCommand.Execute(null);
+
+                            // Deserialize plates
+                            var sourcePlatesJson = reader.GetString("SourcePlatesJson");
+                            var destinationPlatesJson = reader.GetString("DestinationPlatesJson");
+
+                            var loadedSourcePlates = System.Text.Json.JsonSerializer.Deserialize<List<SourcePlate>>(sourcePlatesJson);
+                            var loadedDestinationPlates = System.Text.Json.JsonSerializer.Deserialize<List<DestinationPlate>>(destinationPlatesJson);
+
+                            // Load plates into collections
+                            foreach (var plate in loadedSourcePlates)
+                            {
+                                SourcePlates.Add(plate);
+                            }
+
+                            foreach (var plate in loadedDestinationPlates)
+                            {
+                                DestinationPlates.Add(plate);
+                            }
+
+                            // Load other settings
+                            SourcesToAdd = reader.GetInt32("SourcesToAdd");
+                            ReplicatesOfSourcesToAdd = reader.GetInt32("ReplicatesOfSourcesToAdd");
+                            VolumeOfSourcesToAdd = reader.GetInt32("VolumeOfSourcesToAdd");
+                            AutoFillSlots = reader.GetInt32("AutoFillSlots") == 1;
+
+                            // Update script state
+                            CurrentScriptName = scriptName;
+                            HasUnsavedChanges = false;
+                            IsWorkingWithScript = true;
+
+                            // Update UI
+                            PopulateCarousel(new List<Plate>(loadedSourcePlates.Cast<Plate>().Concat(loadedDestinationPlates.Cast<Plate>())));
+
+                            StatusText += $"Script '{scriptName}' loaded successfully.\n";
+                        }
+                        else
+                        {
+                            throw new Exception($"Script '{scriptName}' not found.");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update the file option handlers
+        partial void OnSelectedFileOptionChanged(string value)
+        {
+            if (value == "Save Script")
+            {
+                SaveScriptCommand.Execute(null);
+                SelectedFileOption = null; // Reset selection
+            }
+            else if (value == "Load Script")
+            {
+                LoadScriptCommand.Execute(null);
+                SelectedFileOption = null; // Reset selection
+            }
+        }
+
+        // Add this method to update collection change handlers in constructor
+        private void SetupCollectionChangeHandlers()
+        {
+            SourcePlates.CollectionChanged += OnSourcePlatesCollectionChanged;
+            DestinationPlates.CollectionChanged += OnDestinationPlatesCollectionChanged;
+            SourcePlates.CollectionChanged += (s, e) => UpdateSourceItemsCollection(new AddButtonViewModel("Source", new RelayCommand<string>(_ => StartAddSourcePlate())));
+            DestinationPlates.CollectionChanged += (s, e) => UpdateDestinationItemsCollection(new AddButtonViewModel("Destination", new RelayCommand<string>(_ => StartAddDestinationPlate())));
+        }
+
+        // Add the ScriptInfo class
+        public class ScriptInfo
+        {
+            public string ScriptName { get; set; }
+            public List<SourcePlate> SourcePlates { get; set; }
+            public List<DestinationPlate> DestinationPlates { get; set; }
+            public int SourcesToAdd { get; set; }
+            public int ReplicatesOfSourcesToAdd { get; set; }
+            public int VolumeOfSourcesToAdd { get; set; }
+            public bool AutoFillSlots { get; set; }
+            public DateTime SavedDate { get; set; }
+        }
     }
 }

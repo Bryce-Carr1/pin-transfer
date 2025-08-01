@@ -44,10 +44,12 @@ namespace Integration
 
         public void ReleaseAll()
         {
-            int count = WaitingCount;
-            for (int i = 0; i < count; i++)
+            lock (_semaphore)
             {
-                _semaphore.Release();
+                for (int i = 0; i < WaitingCount; i++)
+                {
+                    _semaphore.Release();
+                }
             }
         }
 
@@ -669,6 +671,7 @@ namespace Integration
             }
             else if (commandString.StartsWith("Detach"))
             {
+                //TODO extra tool safety verification
                 await Task.WhenAll(
                     _events.WaitForToolState(toolId, "attached", true, ct),
                     _events.WaitForToolState(toolId, "washed", true, ct)
@@ -709,6 +712,7 @@ namespace Integration
                 throw new ArgumentException($"No logic implemented for command: {commandString}");
             }
         }
+
         private async Task WaitForAnyToolSafe(IEnumerable<string> toolIds, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -774,6 +778,7 @@ namespace Integration
                 }
 
                 await Task.WhenAll(
+                    _events.WaitForArmState("safe", true, ct),
                     _events.WaitForArmState("plate_gripped", false, ct)
                 );
                 // Last task to wait for
