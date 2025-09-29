@@ -8,7 +8,7 @@
     <Color x:Key="TertiaryColor">#F4ACC5</Color>
     <Color x:Key="PrimaryDestinationColor">#24532F</Color>
     <Color x:Key="SecondaryDestinationColor">#5A8964</Color>
-    <Color x:Key="TertiaryDestinationColor">#80BD8D</Color>
+    <Color x:Key="TertiaryDestinationColor">#8DD39C</Color>
     <Color x:Key="AccentColor">#281BB5</Color>
     <Color x:Key="BackgroundColor">#C9C1C5</Color>
     <Color x:Key="SecondaryBackgroundColor">#a3989d</Color>
@@ -28,6 +28,37 @@
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor}" />
     <SolidColorBrush x:Key="ForegroundBrush" Color="{StaticResource ForegroundColor}" />
 
+    <!-- Title bar text override -->
+    <Style x:Key="TitleBarTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <!-- Plate text style for the stacker -->
+    <Style x:Key="PlateTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Plate edit textbox style -->
+    <Style x:Key="PlateEditTextBoxStyle" TargetType="{x:Type TextBox}">
+        <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource ForegroundBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="2"/>
+    </Style>
+
     <!-- Minimize Button Template -->
     <Style x:Key="TitleBarButton" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -44,7 +75,7 @@
     <ControlTemplate x:Key="MinimizeButtonControlTemplate" TargetType="Button">
         <!-- Define the control template for the minimize button here -->
         <Border Background="{TemplateBinding Background}">
-            <TextBlock Text="🗕" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <TextBlock Text="🗕" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
         </Border>
     </ControlTemplate>
 
@@ -52,7 +83,7 @@
     <ControlTemplate x:Key="MaximizeButtonControlTemplate" TargetType="Button">
         <Border Background="{TemplateBinding Background}">
             <Grid>
-                <TextBlock Text="🗖" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="🗖" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
             </Grid>
         </Border>
     </ControlTemplate>
@@ -61,7 +92,7 @@
     <ControlTemplate x:Key="RestoreButtonControlTemplate" TargetType="Button">
         <Border Background="{TemplateBinding Background}">
             <Grid>
-                <TextBlock Text="🗗" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Text="🗗" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
             </Grid>
         </Border>
     </ControlTemplate>
@@ -70,7 +101,7 @@
     <ControlTemplate x:Key="CloseButtonControlTemplate" TargetType="Button">
         <!-- Define the control template for the close button here -->
         <Border Background="{TemplateBinding Background}">
-            <TextBlock Text="✖" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
+            <TextBlock Text="✖" FontFamily ="Deja Vu" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource ForegroundBrush}"/>
         </Border>
     </ControlTemplate>
 

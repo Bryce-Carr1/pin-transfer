@@ -95,8 +95,21 @@
     <Compile Include="LabwareDefinitionsWindow.xaml.cs">
       <DependentUpon>LabwareDefinitionsWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ScriptNameDialog.xaml.cs">
+      <DependentUpon>ScriptNameDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ScriptSelectionWindow.xaml.cs">
+      <DependentUpon>ScriptSelectionWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="WindowNavigation.cs" />
     <Compile Include="WindowTools.cs" />
+    <Page Include="ScriptNameDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ScriptSelectionWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Styles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

@@ -4,48 +4,93 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Labware" Height="400" Width="400">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        Title="Labware Definitions" Height="500" Width="450"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Style="{StaticResource RoundedWindowStyle}">
+
+    <Grid Margin="0,10,0,0">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <!-- Custom Title bar -->
+            <RowDefinition Height="*" />
+            <!-- Main content -->
         </Grid.RowDefinitions>
 
-        <Label Content="Name:" Grid.Row="0" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtPlateIdentifier" Grid.Row="0" Grid.Column="1" Margin="5"/>
+        <!-- Custom Title Bar -->
+        <Rectangle Grid.Row="0" Fill="{StaticResource PrimaryBrush}" MouseDown="TitleBar_MouseDown" Height="30"/>
 
-        <Label Content="Height:" Grid.Row="1" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtPlateHeight" Grid.Row="1" Grid.Column="1" Margin="5"/>
+        <!-- Title Bar Content -->
+        <DockPanel Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" HorizontalAlignment="Left" Margin="10,0">
+                <TextBlock Text="Labware Definitions" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+            </StackPanel>
 
-        <Label Content="Nested Height:" Grid.Row="2" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtNestedPlateHeight" Grid.Row="2" Grid.Column="1" Margin="5"/>
+            <!-- Close Button -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                <Button x:Name="CloseButton"
+                        Content="✕"
+                        Width="30" Height="30"
+                        Background="Transparent"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontSize="16"
+                        Click="CloseButton_Click"
+                        Style="{StaticResource TitleBarButton}"/>
+            </StackPanel>
+        </DockPanel>
 
-        <Label Content="Low Volume:" Grid.Row="4" Grid.Column="0" Margin="5"/>
-        <CheckBox x:Name="chkIsLowVolume" Grid.Row="4" Grid.Column="1" Margin="5"/>
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="15" Background="{StaticResource BackgroundBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <Label Content="Y Offset:" Grid.Row="5" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtOffsetY" Grid.Row="5" Grid.Column="1" Margin="5"/>
-        
-        <Label Content="Type:" Grid.Row="6" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtType" Grid.Row="6" Grid.Column="1" Margin="5"/>
-        
-        <StackPanel Orientation="Horizontal" Grid.Row="7" Grid.ColumnSpan="2" Margin="5">
-            <Button x:Name="btnAdd" Content="Add" Click="btnAdd_Click" Margin="0,0,10,0"/>
-            <Button x:Name="btnUpdate" Content="Update" Click="btnUpdate_Click" Margin="0,0,10,0"/>
-            <Button x:Name="btnDelete" Content="Delete" Click="btnDelete_Click"/>
-        </StackPanel>
+            <Label Content="Name:" Grid.Row="0" Grid.Column="0" Margin="5"/>
+            <TextBox x:Name="txtPlateIdentifier" Grid.Row="0" Grid.Column="1" Margin="5"/>
 
-        <ListBox x:Name="lstLabware" Grid.Row="8" Grid.ColumnSpan="2" Margin="5" SelectionChanged="lstLabware_SelectionChanged"/>
+            <Label Content="Height:" Grid.Row="1" Grid.Column="0" Margin="5"/>
+            <TextBox x:Name="txtPlateHeight" Grid.Row="1" Grid.Column="1" Margin="5"/>
+
+            <Label Content="Nested Height:" Grid.Row="2" Grid.Column="0" Margin="5"/>
+            <TextBox x:Name="txtNestedPlateHeight" Grid.Row="2" Grid.Column="1" Margin="5"/>
+
+            <Label Content="Low Volume:" Grid.Row="3" Grid.Column="0" Margin="5"/>
+            <CheckBox x:Name="chkIsLowVolume" Grid.Row="3" Grid.Column="1" Margin="5"/>
+
+            <Label Content="Y Offset:" Grid.Row="4" Grid.Column="0" Margin="5"/>
+            <TextBox x:Name="txtOffsetY" Grid.Row="4" Grid.Column="1" Margin="5"/>
+
+            <Label Content="Type:" Grid.Row="5" Grid.Column="0" Margin="5"/>
+            <TextBox x:Name="txtType" Grid.Row="5" Grid.Column="1" Margin="5"/>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="6" Grid.ColumnSpan="2" Margin="5" HorizontalAlignment="Center">
+                <Button x:Name="btnAdd" Content="Add" Click="btnAdd_Click" Margin="0,0,10,0" Padding="10,5"/>
+                <Button x:Name="btnUpdate" Content="Update" Click="btnUpdate_Click" Margin="0,0,10,0" Padding="10,5"/>
+                <Button x:Name="btnDelete" Content="Delete" Click="btnDelete_Click" Padding="10,5"/>
+            </StackPanel>
+
+            <!-- Clear button -->
+            <Button x:Name="btnClear" Content="Clear" Grid.Row="7" Grid.ColumnSpan="2" 
+                    Click="btnClear_Click" Margin="5" Padding="10,5" HorizontalAlignment="Center"/>
+
+            <ListBox x:Name="lstLabware" Grid.Row="8" Grid.ColumnSpan="2" Margin="5" 
+                     SelectionChanged="lstLabware_SelectionChanged"
+                     Background="{StaticResource SecondaryBackgroundBrush}"/>
+        </Grid>
     </Grid>
 </Window>

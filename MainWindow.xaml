@@ -339,10 +339,7 @@
             <!-- Add Plate Controls (Shown when in add mode) -->
             <Grid Grid.Row="3" Visibility="{Binding IsInSourceAddMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="Adding Source Plate - Select 
-                               
-                               
-                               Plates" Margin="0,5,0,5" FontWeight="Bold"/>
+                    <TextBlock Text="Adding Source Plate - Select Plates" Margin="0,5,0,5" FontWeight="Bold"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Transfer Volume: " VerticalAlignment="Center"/>
                         <ComboBox ItemsSource="{Binding PinVolumes}" 

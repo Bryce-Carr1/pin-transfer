@@ -3,11 +3,12 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace PinTransferWPF
 {
     /// <summary>
-    /// Interaction logic for Window1.xaml
+    /// Interaction logic for LabwareDefinitionsWindow.xaml
     /// </summary>
     public partial class LabwareDefinitionsWindow : Window
     {
@@ -22,25 +23,46 @@ namespace PinTransferWPF
             Closed += LabwareDefinitionsWindow_Closed;
         }
 
+        // Handle custom title bar dragging
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                this.DragMove();
+            }
+        }
+
+        // Handle custom close button
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
         private void LabwareDefinitionsWindow_Closed(object sender, EventArgs e)
         {
             //_labwareManager.Close(); // Dispose the LabwareManager, which will handle connection closing
         }
+
         private void LoadLabware()
         {
             lstLabware.Items.Clear();
             var labwares = _labwareManager.GetAllLabware();
             foreach (var labware in labwares)
             {
-                lstLabware.Items.Add($"{labware.Identifier}: {labware.Height}, {labware.NestedHeight}, {labware.IsLowVolume}, {labware.OffsetY}, {labware.Type}");
+                lstLabware.Items.Add($"{labware.Identifier}: H:{labware.Height}, NH:{labware.NestedHeight}, LV:{(labware.IsLowVolume == 1 ? "Yes" : "No")}, Y:{labware.OffsetY}, T:{labware.Type}");
             }
-            foreach (var item in lstLabware.Items)
+
+            // Select the item matching the current identifier if it exists
+            if (!string.IsNullOrEmpty(txtPlateIdentifier.Text))
             {
-                string itemString = item.ToString(); // Get the string representation of the item
-                if (itemString.Contains(txtPlateIdentifier.Text + ":"))
+                foreach (var item in lstLabware.Items)
                 {
-                    lstLabware.SelectedItem = item; // Set the selected item
-                    break; // Exit the loop if you only want to select the first match
+                    string itemString = item.ToString();
+                    if (itemString.Contains(txtPlateIdentifier.Text + ":"))
+                    {
+                        lstLabware.SelectedItem = item;
+                        break;
+                    }
                 }
             }
         }
@@ -50,20 +72,24 @@ namespace PinTransferWPF
             var plateIdentifier = txtPlateIdentifier.Text.Trim();
             var plateHeightText = txtPlateHeight.Text.Trim();
             var nestedPlateHeightText = txtNestedPlateHeight.Text.Trim();
-            var isLowVolume = chkIsLowVolume.IsChecked.Value;
+            var isLowVolume = chkIsLowVolume.IsChecked ?? false;
             var offsetYText = txtOffsetY.Text.Trim();
             var type = txtType.Text.Trim();
 
-            if (string.IsNullOrEmpty(plateIdentifier) || string.IsNullOrEmpty(plateHeightText) || string.IsNullOrEmpty(nestedPlateHeightText) || string.IsNullOrEmpty(offsetYText) || string.IsNullOrEmpty(type))
+            if (string.IsNullOrEmpty(plateIdentifier) || string.IsNullOrEmpty(plateHeightText) ||
+                string.IsNullOrEmpty(nestedPlateHeightText) || string.IsNullOrEmpty(offsetYText) ||
+                string.IsNullOrEmpty(type))
             {
                 MessageBox.Show("Please enter values for all fields.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             double plateHeight, nestedPlateHeight, offsetY;
-            if (!double.TryParse(plateHeightText, out plateHeight) || !double.TryParse(nestedPlateHeightText, out nestedPlateHeight) || !double.TryParse(offsetYText, out offsetY))
+            if (!double.TryParse(plateHeightText, out plateHeight) ||
+                !double.TryParse(nestedPlateHeightText, out nestedPlateHeight) ||
+                !double.TryParse(offsetYText, out offsetY))
             {
-                MessageBox.Show("Please enter valid numeric values", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Please enter valid numeric values for Height, Nested Height, and Y Offset.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -78,7 +104,8 @@ namespace PinTransferWPF
                     OffsetY = offsetY,
                     Type = type
                 });
-                //ClearInputs();
+
+                MessageBox.Show($"Labware '{plateIdentifier}' added successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 LoadLabware();
             }
             catch (Exception ex)
@@ -92,35 +119,46 @@ namespace PinTransferWPF
             var selectedItem = lstLabware.SelectedItem?.ToString();
             if (string.IsNullOrEmpty(selectedItem))
             {
-                MessageBox.Show("Please select a labware to update.");
+                MessageBox.Show("Please select a labware to update.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => $"{l.Identifier}: {l.Height}, {l.NestedHeight}, {l.IsLowVolume}, {l.OffsetY}, {l.Type}" == selectedItem);
+            // Extract the identifier from the selected item
+            var identifier = selectedItem.Split(':')[0];
+            var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => l.Identifier == identifier);
 
             if (labware == null)
             {
-                MessageBox.Show("Selected labware not found.");
+                MessageBox.Show("Selected labware not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
+            // Validate inputs
+            if (!ValidateInputs())
+                return;
+
+            // Update the labware object
+            var originalIdentifier = labware.Identifier;
+            labware.Identifier = txtPlateIdentifier.Text.Trim();
             labware.Height = double.Parse(txtPlateHeight.Text.Trim());
             labware.NestedHeight = double.Parse(txtNestedPlateHeight.Text.Trim());
-            labware.IsLowVolume = chkIsLowVolume.IsChecked.Value ? 1 : 0;
+            labware.IsLowVolume = (chkIsLowVolume.IsChecked ?? false) ? 1 : 0;
             labware.OffsetY = double.Parse(txtOffsetY.Text.Trim());
             labware.Type = txtType.Text.Trim();
 
             try
             {
+                // Use the original identifier for the lookup, and the new identifier for the update
+                labware.Identifier = originalIdentifier; // Temporarily set back for the update method
                 _labwareManager.UpdateLabware(labware, txtPlateIdentifier.Text.Trim());
+
+                MessageBox.Show($"Labware updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadLabware();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
-            //ClearInputs();
-            LoadLabware();
         }
 
         private void btnDelete_Click(object sender, RoutedEventArgs e)
@@ -128,46 +166,97 @@ namespace PinTransferWPF
             var selectedItem = lstLabware.SelectedItem?.ToString();
             if (string.IsNullOrEmpty(selectedItem))
             {
-                MessageBox.Show("Please select a labware to delete.");
+                MessageBox.Show("Please select a labware to delete.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => $"{l.Identifier}: {l.Height}, {l.NestedHeight}, {l.IsLowVolume}, {l.OffsetY}, {l.Type}" == selectedItem);
+            // Extract the identifier from the selected item
+            var identifier = selectedItem.Split(':')[0];
+            var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => l.Identifier == identifier);
 
             if (labware == null)
             {
-                MessageBox.Show("Selected labware not found.");
+                MessageBox.Show("Selected labware not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            _labwareManager.DeleteLabware(labware);
+            var result = MessageBox.Show($"Are you sure you want to delete labware '{labware.Identifier}'?",
+                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-            LoadLabware();
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _labwareManager.DeleteLabware(labware);
+                    MessageBox.Show($"Labware '{labware.Identifier}' deleted successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    LoadLabware();
+                    ClearInputs();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void btnClear_Click(object sender, RoutedEventArgs e)
+        {
             ClearInputs();
+            lstLabware.SelectedItem = null;
         }
 
         private void lstLabware_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (lstLabware.SelectedItem == null)
             {
-                //ClearInputs();
+                // Don't clear inputs when selection is cleared
+                return;
             }
-            else
-            {
-                var selectedItem = lstLabware.SelectedItem.ToString();
-                var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => $"{l.Identifier}: {l.Height}, {l.NestedHeight}, {l.IsLowVolume}, {l.OffsetY}, {l.Type}" == selectedItem);
 
-                if (labware != null)
-                {
-                    txtPlateIdentifier.Text = labware.Identifier;
-                    txtPlateHeight.Text = labware.Height.ToString();
-                    txtNestedPlateHeight.Text = labware.NestedHeight.ToString();
-                    chkIsLowVolume.IsChecked = labware.IsLowVolume == 1; // Convert int to bool
-                    txtOffsetY.Text = labware.OffsetY.ToString();
-                    txtType.Text = labware.Type.ToString();
-                }
+            var selectedItem = lstLabware.SelectedItem.ToString();
+            // Extract the identifier (everything before the first colon)
+            var identifier = selectedItem.Split(':')[0];
+            var labware = _labwareManager.GetAllLabware().FirstOrDefault(l => l.Identifier == identifier);
+
+            if (labware != null)
+            {
+                txtPlateIdentifier.Text = labware.Identifier;
+                txtPlateHeight.Text = labware.Height.ToString();
+                txtNestedPlateHeight.Text = labware.NestedHeight.ToString();
+                chkIsLowVolume.IsChecked = labware.IsLowVolume == 1;
+                txtOffsetY.Text = labware.OffsetY.ToString();
+                txtType.Text = labware.Type;
             }
         }
+
+        private bool ValidateInputs()
+        {
+            var plateIdentifier = txtPlateIdentifier.Text.Trim();
+            var plateHeightText = txtPlateHeight.Text.Trim();
+            var nestedPlateHeightText = txtNestedPlateHeight.Text.Trim();
+            var offsetYText = txtOffsetY.Text.Trim();
+            var type = txtType.Text.Trim();
+
+            if (string.IsNullOrEmpty(plateIdentifier) || string.IsNullOrEmpty(plateHeightText) ||
+                string.IsNullOrEmpty(nestedPlateHeightText) || string.IsNullOrEmpty(offsetYText) ||
+                string.IsNullOrEmpty(type))
+            {
+                MessageBox.Show("Please enter values for all fields.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            double plateHeight, nestedPlateHeight, offsetY;
+            if (!double.TryParse(plateHeightText, out plateHeight) ||
+                !double.TryParse(nestedPlateHeightText, out nestedPlateHeight) ||
+                !double.TryParse(offsetYText, out offsetY))
+            {
+                MessageBox.Show("Please enter valid numeric values for Height, Nested Height, and Y Offset.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            return true;
+        }
+
         private void ClearInputs()
         {
             txtPlateIdentifier.Clear();

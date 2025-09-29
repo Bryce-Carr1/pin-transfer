@@ -103,12 +103,18 @@ namespace PinTransferWPF
             // Subscribe to multi plate selection
             ViewModel.MultiSelectionReset += (sender, args) => ResetMultiSelectionState();
 
+            // Subscribe to the LoadScriptRequested event
+            ViewModel.LoadScriptRequested += (sender, args) => OpenLoadScriptDialog();
+
             // Bind the Window's StateChanged event to update the ViewModel
             StateChanged += (sender, args) => ViewModel.WindowState = WindowState;
 
             //Subscribe to plates changing
             ViewModel.SourcePlates.CollectionChanged += OnPlatesChanged;
             ViewModel.DestinationPlates.CollectionChanged += OnPlatesChanged;
+
+            // Subscribe to the SaveAsScriptRequested event
+            ViewModel.SaveAsScriptRequested += (sender, args) => OpenSaveAsScriptDialog();
 
             // Define grid rows and columns
             for (int i = 0; i < 3; i++)
@@ -127,6 +133,42 @@ namespace PinTransferWPF
             resizeTimer = new DispatcherTimer();
             resizeTimer.Interval = TimeSpan.FromMilliseconds(250);
             resizeTimer.Tick += ResizeTimer_Tick;
+        }
+        private void OpenLoadScriptDialog()
+        {
+            try
+            {
+                string connectionString = "Data Source=" + Parameters.LoggingDatabase;
+                var scriptDialog = new ScriptSelectionWindow(connectionString);
+                scriptDialog.Owner = this;
+
+                if (scriptDialog.ShowDialog() == true)
+                {
+                    ViewModel.LoadSelectedScript(scriptDialog.SelectedScriptName);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load script: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OpenSaveAsScriptDialog()
+        {
+            try
+            {
+                var dialog = new ScriptNameDialog(ViewModel.CurrentScriptName ?? "");
+                dialog.Owner = this;
+
+                if (dialog.ShowDialog() == true)
+                {
+                    ViewModel.SaveScriptWithName(dialog.ScriptName);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save script: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         //AI
@@ -182,8 +224,18 @@ namespace PinTransferWPF
         }
         private void OpenLabware()
         {
-            LabwareDefinitionsWindow labwareDefinitionsWindow = new LabwareDefinitionsWindow("Data Source=" + Parameters.LabwareDatabase);
-            labwareDefinitionsWindow.ShowDialog();
+            try
+            {
+                // Create a new instance each time - don't reuse closed windows
+                string connectionString = "Data Source=" + Parameters.LabwareDatabase;
+                var labwareWindow = new LabwareDefinitionsWindow(connectionString);
+                labwareWindow.Owner = this; // Set the main window as owner
+                labwareWindow.ShowDialog(); // Use ShowDialog for modal behavior, or Show() for non-modal
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open Labware Definitions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void CreateMicroplateStacker()
@@ -822,14 +874,14 @@ namespace PinTransferWPF
                             for (int i = startIndex; i <= endIndex; i++)
                             {
                                 ViewModel.SourcePlates[i].IsSelected = true;
-                                ViewModel.SourcePlates[i].SelectionColor = "SecondaryDestination";
+                                ViewModel.SourcePlates[i].SelectionColor = "Secondary";
                             }
                         }
                         else
                         {
                             // No previous selection, just select this item
                             plate.IsSelected = true;
-                            plate.SelectionColor = "SecondaryDestination";
+                            plate.SelectionColor = "Secondary";
                             lastSelectedSourceIndex = currentIndex;
                         }
                     }
@@ -876,14 +928,14 @@ namespace PinTransferWPF
                             for (int i = startIndex; i <= endIndex; i++)
                             {
                                 ViewModel.DestinationPlates[i].IsSelected = true;
-                                ViewModel.DestinationPlates[i].SelectionColor = "Secondary";
+                                ViewModel.DestinationPlates[i].SelectionColor = "SecondaryDestination";
                             }
                         }
                         else
                         {
                             // No previous selection, just select this item
                             plate.IsSelected = true;
-                            plate.SelectionColor = "Secondary";
+                            plate.SelectionColor = "SecondaryDestination";
                             lastSelectedDestIndex = currentIndex;
                         }
                     }
