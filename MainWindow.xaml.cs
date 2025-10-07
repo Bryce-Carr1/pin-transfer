@@ -651,8 +651,20 @@ namespace PinTransferWPF
             ListViewItem item = sender as ListViewItem;
             if (item?.Content is Plate plate)
             {
+                // Cancel any existing editing first
+                if (ViewModel.EditingPlate != null)
+                {
+                    ViewModel.CancelRenamePlateCommand.Execute(null);
+                }
+
                 // Create context menu
                 ContextMenu contextMenu = new ContextMenu();
+
+                // Add rename menu item
+                MenuItem renameMenuItem = new MenuItem();
+                renameMenuItem.Header = "Rename";
+                renameMenuItem.Command = ViewModel.StartRenamePlateCommand;
+                renameMenuItem.CommandParameter = plate;
 
                 // Add delete menu item
                 MenuItem deleteMenuItem = new MenuItem();
@@ -660,6 +672,7 @@ namespace PinTransferWPF
                 deleteMenuItem.Command = ViewModel.DeletePlateCommand;
                 deleteMenuItem.CommandParameter = plate;
 
+                contextMenu.Items.Add(renameMenuItem);
                 contextMenu.Items.Add(deleteMenuItem);
 
                 // Show the context menu

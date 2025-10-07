@@ -17,7 +17,7 @@
         <!-- Custom Title Bar -->
         <Rectangle Grid.Row="0" Fill="{StaticResource PrimaryBrush}" MouseDown="TitleBar_MouseDown" Height="30"/>
         <DockPanel Grid.Row="0">
-            <TextBlock Text="Script Name" Foreground="White" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0"/>
+            <TextBlock Text="Script Name" Foreground="White" VerticalAlignment="Center" Margin="10,0"/>
             <Button Content="✕" Width="30" Height="30" Background="Transparent" Foreground="White" 
                     BorderThickness="0" FontSize="16" Click="CloseButton_Click"
                     DockPanel.Dock="Right" Style="{StaticResource TitleBarButton}"/>

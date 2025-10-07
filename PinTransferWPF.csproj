@@ -91,6 +91,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Behaviors.cs" />
+    <Compile Include="Converters.cs" />
     <Compile Include="PinTransfer.cs" />
     <Compile Include="LabwareDefinitionsWindow.xaml.cs">
       <DependentUpon>LabwareDefinitionsWindow.xaml</DependentUpon>

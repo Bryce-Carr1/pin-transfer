@@ -25,14 +25,15 @@ namespace Integration
             using (var _connection = new SQLiteConnection(_connectionString))
             {
                 _connection.Open();
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS Labware (
-                                                Identifier TEXT NOT NULL PRIMARY KEY,
-                                                Height REAL NOT NULL,
-                                                NestedHeight REAL NOT NULL,
-                                                IsLowVolume INTEGER NOT NULL,
-                                                OffsetY REAL NOT NULL,
-                                                Type TEXT NOT NULL
-                                                )", _connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS Labware (
+                        Identifier TEXT NOT NULL PRIMARY KEY,
+                        Height REAL NOT NULL,
+                        NestedHeight REAL NOT NULL,
+                        IsLowVolume INTEGER NOT NULL,
+                        OffsetY REAL NOT NULL,
+                        Type TEXT NOT NULL
+                    )", _connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -369,14 +370,15 @@ namespace Integration
             using (var _connection = new SQLiteConnection("Data Source=" + Parameters.LoggingDatabase))
             {
                 _connection.Open();
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS RunInfo (
-                                                RunID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                JournalID TEXT NOT NULL,
-                                                TimeRun TEXT NOT NULL,
-                                                ScreenNumber INTEGER NOT NULL,
-                                                UserName TEXT NOT NULL,
-                                                FOREIGN KEY (JournalID) REFERENCES Journals(JournalID)
-                                                )", _connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS RunInfo (
+                        RunID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        JournalID TEXT NOT NULL,
+                        TimeRun TEXT NOT NULL,
+                        ScreenNumber INTEGER NOT NULL,
+                        UserName TEXT NOT NULL,
+                        FOREIGN KEY (JournalID) REFERENCES Journals(JournalID)
+                    )", _connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -400,19 +402,21 @@ namespace Integration
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS RunState (
-                                                JournalID TEXT PRIMARY KEY,
-                                                EpsonCommandID INTEGER NOT NULL,
-                                                KX2CommandID INTEGER NOT NULL,
-                                                SerializedToolStates TEXT NOT NULL,
-                                                SerializedArmStates TEXT NOT NULL,
-                                                SerializedStageStates TEXT NOT NULL,
-                                                SerializedCarouselStates TEXT NOT NULL,
-                                                Plates TEXT NOT NULL,
-                                                InitialPlates TEXT NOT NULL,
-                                                LastUpdated TEXT NOT NULL,
-                                                Completed INTEGER NOT NULL,
-                                                ResumeLine INTEGER NOT NULL)", connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS RunState (
+                        JournalID TEXT PRIMARY KEY,
+                        EpsonCommandID INTEGER NOT NULL,
+                        KX2CommandID INTEGER NOT NULL,
+                        SerializedToolStates TEXT NOT NULL,
+                        SerializedArmStates TEXT NOT NULL,
+                        SerializedStageStates TEXT NOT NULL,
+                        SerializedCarouselStates TEXT NOT NULL,
+                        Plates TEXT NOT NULL,
+                        InitialPlates TEXT NOT NULL,
+                        LastUpdated TEXT NOT NULL,
+                        Completed INTEGER NOT NULL,
+                        ResumeLine INTEGER NOT NULL
+                    )", connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -424,19 +428,21 @@ namespace Integration
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS RunState (
-                                                JournalID TEXT PRIMARY KEY,
-                                                EpsonCommandID INTEGER NOT NULL,
-                                                KX2CommandID INTEGER NOT NULL,
-                                                SerializedToolStates TEXT NOT NULL,
-                                                SerializedArmStates TEXT NOT NULL,
-                                                SerializedStageStates TEXT NOT NULL,
-                                                SerializedCarouselStates TEXT NOT NULL,
-                                                Plates TEXT NOT NULL,
-                                                InitialPlates TEXT NOT NULL,
-                                                LastUpdated TEXT NOT NULL,
-                                                Completed INTEGER NOT NULL,
-                                                ResumeLine INTEGER NOT NULL)", connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS RunState (
+                        JournalID TEXT PRIMARY KEY,
+                        EpsonCommandID INTEGER NOT NULL,
+                        KX2CommandID INTEGER NOT NULL,
+                        SerializedToolStates TEXT NOT NULL,
+                        SerializedArmStates TEXT NOT NULL,
+                        SerializedStageStates TEXT NOT NULL,
+                        SerializedCarouselStates TEXT NOT NULL,
+                        Plates TEXT NOT NULL,
+                        InitialPlates TEXT NOT NULL,
+                        LastUpdated TEXT NOT NULL,
+                        Completed INTEGER NOT NULL,
+                        ResumeLine INTEGER NOT NULL
+                    )", connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -467,19 +473,21 @@ namespace Integration
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS RunState (
-                                                JournalID TEXT PRIMARY KEY,
-                                                EpsonCommandID INTEGER NOT NULL,
-                                                KX2CommandID INTEGER NOT NULL,
-                                                SerializedToolStates TEXT NOT NULL,
-                                                SerializedArmStates TEXT NOT NULL,
-                                                SerializedStageStates TEXT NOT NULL,
-                                                SerializedCarouselStates TEXT NOT NULL,
-                                                Plates TEXT NOT NULL,
-                                                InitialPlates TEXT NOT NULL,
-                                                LastUpdated TEXT NOT NULL,
-                                                Completed INTEGER NOT NULL,
-                                                ResumeLine INTEGER NOT NULL)", connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS RunState (
+                        JournalID TEXT PRIMARY KEY,
+                        EpsonCommandID INTEGER NOT NULL,
+                        KX2CommandID INTEGER NOT NULL,
+                        SerializedToolStates TEXT NOT NULL,
+                        SerializedArmStates TEXT NOT NULL,
+                        SerializedStageStates TEXT NOT NULL,
+                        SerializedCarouselStates TEXT NOT NULL,
+                        Plates TEXT NOT NULL,
+                        InitialPlates TEXT NOT NULL,
+                        LastUpdated TEXT NOT NULL,
+                        Completed INTEGER NOT NULL,
+                        ResumeLine INTEGER NOT NULL
+                    )", connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -525,9 +533,10 @@ namespace Integration
             {
                 _connection.Open();
                 // Create the Journals tables
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS Journals (
-                                                        JournalID TEXT PRIMARY KEY
-                                                        )", _connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS Journals (
+                        JournalID TEXT PRIMARY KEY
+                    )", _connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -538,14 +547,15 @@ namespace Integration
                     command.ExecuteNonQuery();
                 }
                 // Create the InstrumentCommands tables
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS InstrumentCommands (
-                                                        CommandID INTEGER NOT NULL,
-                                                        Instrument TEXT NOT NULL,
-                                                        JournalID TEXT NOT NULL,
-                                                        Command TEXT NOT NULL,
-                                                        PRIMARY KEY (CommandID, Instrument, JournalID)
-                                                        FOREIGN KEY (JournalID) REFERENCES Journals(JournalID)
-                                                        )", _connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS InstrumentCommands (
+                        CommandID INTEGER NOT NULL,
+                        Instrument TEXT NOT NULL,
+                        JournalID TEXT NOT NULL,
+                        Command TEXT NOT NULL,
+                        PRIMARY KEY (CommandID, Instrument, JournalID)
+                        FOREIGN KEY (JournalID) REFERENCES Journals(JournalID)
+                    )", _connection))
                 {
                     command.ExecuteNonQuery();
                 }

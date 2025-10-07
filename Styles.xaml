@@ -2,6 +2,11 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:PinTransferWPF"
                     xmlns:System="clr-namespace:System;assembly=mscorlib">
+
+    <local:EditingPlateVisibilityConverter x:Key="EditingPlateVisibilityConverter"/>
+    <local:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
+    <local:InverseEqualityToVisibilityConverter x:Key="InverseEqualityToVisibilityConverter"/>
+
     <!-- Define Colors -->
     <Color x:Key="PrimaryColor">#7F3F55</Color>
     <Color x:Key="SecondaryColor">#A7526F</Color>
@@ -109,19 +114,20 @@
     <ControlTemplate x:Key="TitleBarComboBoxTemplate" TargetType="{x:Type ComboBox}">
         <Grid>
             <ToggleButton x:Name="ToggleButton"
-                    Grid.Column="0"
-                    Margin="0,0,5,0"
-                    Focusable="False"
-                    ClickMode="Press"
-                    IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
-                    Content="{TemplateBinding Tag}"
-                    FontFamily="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(local:ComboBoxExtensions.ButtonFontFamily)}"
-                    FontSize="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(local:ComboBoxExtensions.ButtonFontSize)}">
+                Grid.Column="0"
+                Margin="0,0,5,0"
+                Focusable="False"
+                ClickMode="Press"
+                IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                Content="{TemplateBinding Tag}"
+                FontFamily="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(local:ComboBoxExtensions.ButtonFontFamily)}"
+                FontSize="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=(local:ComboBoxExtensions.ButtonFontSize)}">
                 <ToggleButton.Template>
                     <ControlTemplate TargetType="{x:Type ToggleButton}">
                         <Border Background="{TemplateBinding Background}">
                             <ContentPresenter HorizontalAlignment="Center" 
-                                        VerticalAlignment="Center"/>
+                                    VerticalAlignment="Center"
+                                    TextElement.Foreground="{StaticResource ForegroundBrush}"/>
                         </Border>
                     </ControlTemplate>
                 </ToggleButton.Template>
@@ -380,14 +386,13 @@
                                             <ContentPresenter Grid.Column="0"
                                                         Content="{TemplateBinding Content}"
                                                         ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                        Margin="10,5"
                                                         VerticalAlignment="Center"/>
                                             <Path x:Name="Arrow" Grid.Column="1"
                                               Fill="{StaticResource ForegroundBrush}"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Data="M0,0 L8,0 L4,4 Z"
-                                              Margin="0,0,10,0"/>
+                                              Margin="0,0,0,0"/>
                                         </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>
@@ -483,7 +488,61 @@
     <!-- Template for regular plate items -->
     <DataTemplate x:Key="PlateDataTemplate">
         <Border x:Name="PlateBorder" Padding="10,5" CornerRadius="4" BorderThickness="1">
-            <TextBlock Text="{Binding ID}" />
+            <Grid>
+                <!-- Normal display TextBlock -->
+                <TextBlock x:Name="PlateText" 
+                       Text="{Binding ID}" 
+                       FontSize="16" 
+                       FontWeight="Bold">
+                    <TextBlock.Visibility>
+                        <MultiBinding Converter="{StaticResource EditingPlateVisibilityConverter}" ConverterParameter="Display">
+                            <Binding Path="DataContext.EditingPlate" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Window}}"/>
+                            <Binding Path="."/>
+                        </MultiBinding>
+                    </TextBlock.Visibility>
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="Black" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectionColor}" Value="Primary">
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectionColor}" Value="Secondary">
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectionColor}" Value="PrimaryDestination">
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectionColor}" Value="SecondaryDestination">
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- Edit mode TextBox -->
+                <!-- Edit mode TextBox -->
+                <TextBox x:Name="EditTextBox"
+                     Text="{Binding DataContext.EditingPlateId, 
+                           RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}, 
+                           UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                     FontSize="16"
+                     FontWeight="Bold"
+                     BorderThickness="1"
+                     Background="White"
+                     Foreground="Black"
+                     SelectionBrush="{StaticResource PrimaryBrush}"
+                     local:TextBoxBehaviors.SelectAllOnFocus="True">
+                    <TextBox.Visibility>
+                        <MultiBinding Converter="{StaticResource EditingPlateVisibilityConverter}" ConverterParameter="Edit">
+                            <Binding Path="DataContext.EditingPlate" RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Window}}"/>
+                            <Binding Path="."/>
+                        </MultiBinding>
+                    </TextBox.Visibility>
+                </TextBox>
+            </Grid>
+
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Background" Value="Transparent" />
@@ -496,6 +555,14 @@
                         <DataTrigger Binding="{Binding SelectionColor}" Value="Secondary">
                             <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
                             <Setter Property="BorderBrush" Value="{StaticResource SecondaryBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding SelectionColor}" Value="PrimaryDestination">
+                            <Setter Property="Background" Value="{StaticResource PrimaryDestinationBrush}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryDestinationBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding SelectionColor}" Value="SecondaryDestination">
+                            <Setter Property="Background" Value="{StaticResource SecondaryDestinationBrush}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource SecondaryDestinationBrush}" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

@@ -132,6 +132,11 @@ namespace ViewModels
             _epsonRunner = new CommandRunner<StackType>(_parser, "Epson", _runLogger, _events);
             _kx2Runner = new CommandRunner<StackType>(_parser, "KX2", _runLogger, _events);
 
+            StartRenamePlateCommand = new RelayCommand<Plate>(StartRenamePlate);
+            ConfirmRenamePlateCommand = new RelayCommand<Plate>(ConfirmRenamePlate);
+            CancelRenamePlateCommand = new RelayCommand(CancelRenamePlate);
+
+
             SourceItemsWithAddButton = new ObservableCollection<object>();
             DestinationItemsWithAddButton = new ObservableCollection<object>();
 
@@ -1142,7 +1147,6 @@ namespace ViewModels
 
                 CreateRunCommand.Execute(null);
 
-                // Continue with existing StartRun logic...
                 if (Parameters.UsingInstruments)
                 {
                     if (!_instrumentController.KX2.IsInitialized())
@@ -1153,8 +1157,6 @@ namespace ViewModels
                         });
                     }
                 }
-
-                // ... rest of existing StartRun code
                 string currentJournalID = RunInfo.JournalID;
                 _events.ResetEvents();
                 string serializedPlates = _runLogger.LoadRunState(currentJournalID).InitialPlates;
@@ -1997,16 +1999,17 @@ namespace ViewModels
                 connection.Open();
 
                 // Create Scripts table if it doesn't exist
-                using (var command = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS Scripts (
-                                                            ScriptName TEXT PRIMARY KEY,
-                                                            SourcePlatesJson TEXT NOT NULL,
-                                                            DestinationPlatesJson TEXT NOT NULL,
-                                                            SourcesToAdd INTEGER NOT NULL,
-                                                            ReplicatesOfSourcesToAdd INTEGER NOT NULL,
-                                                            VolumeOfSourcesToAdd INTEGER NOT NULL,
-                                                            AutoFillSlots INTEGER NOT NULL,
-                                                            SavedDate TEXT NOT NULL
-                                                        )", connection))
+                using (var command = new SQLiteCommand(
+                    @"CREATE TABLE IF NOT EXISTS Scripts (
+                        ScriptName TEXT PRIMARY KEY,
+                        SourcePlatesJson TEXT NOT NULL,
+                        DestinationPlatesJson TEXT NOT NULL,
+                        SourcesToAdd INTEGER NOT NULL,
+                        ReplicatesOfSourcesToAdd INTEGER NOT NULL,
+                        VolumeOfSourcesToAdd INTEGER NOT NULL,
+                        AutoFillSlots INTEGER NOT NULL,
+                        SavedDate TEXT NOT NULL
+                    )", connection))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -2130,7 +2133,7 @@ namespace ViewModels
             return scripts;
         }
 
-        // Add this method to update collection change handlers in constructor
+        // Method to update collection change handlers in constructor
         private void SetupCollectionChangeHandlers()
         {
             SourcePlates.CollectionChanged += OnSourcePlatesCollectionChanged;
@@ -2150,6 +2153,62 @@ namespace ViewModels
             public int VolumeOfSourcesToAdd { get; set; }
             public bool AutoFillSlots { get; set; }
             public DateTime SavedDate { get; set; }
+        }
+
+        private Plate _editingPlate;
+        public Plate EditingPlate
+        {
+            get => _editingPlate;
+            set => SetProperty(ref _editingPlate, value);
+        }
+
+        private string _editingPlateId;
+        public string EditingPlateId
+        {
+            get => _editingPlateId;
+            set => SetProperty(ref _editingPlateId, value);
+        }
+
+        public ICommand StartRenamePlateCommand { get; }
+        public ICommand ConfirmRenamePlateCommand { get; }
+        public ICommand CancelRenamePlateCommand { get; }
+        private void StartRenamePlate(Plate plate)
+        {
+            if (plate != null)
+            {
+                EditingPlate = plate;
+                EditingPlateId = plate.ID;
+            }
+        }
+
+        private void ConfirmRenamePlate(Plate plate = null)
+        {
+            if (EditingPlate != null && !string.IsNullOrWhiteSpace(EditingPlateId))
+            {
+                // Validate that no other plate has this ID
+                bool idExists = SourcePlates.Any(p => p != EditingPlate && p.ID.Equals(EditingPlateId, StringComparison.OrdinalIgnoreCase)) ||
+                               DestinationPlates.Any(p => p != EditingPlate && p.ID.Equals(EditingPlateId, StringComparison.OrdinalIgnoreCase));
+
+                if (idExists)
+                {
+                    System.Windows.MessageBox.Show($"A plate with ID '{EditingPlateId}' already exists.", "Duplicate ID",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    EditingPlateId = EditingPlate.ID; // Reset to original value
+                    return;
+                }
+
+                // Update the plate ID
+                EditingPlate.ID = EditingPlateId;
+            }
+
+            // Always clear editing state
+            CancelRenamePlate();
+        }
+
+        private void CancelRenamePlate()
+        {
+            EditingPlate = null;
+            EditingPlateId = null;
         }
     }
 }
